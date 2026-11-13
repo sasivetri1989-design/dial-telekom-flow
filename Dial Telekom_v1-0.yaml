@@ -1,20 +1,39 @@
-# =============================================================================
-# Dial Telekom — Inbound Call Flow (Genesys Cloud Architect YAML)
-# =============================================================================
-#
-# HOW TO POPULATE THIS FILE
-# --------------------------
-# 1. Log in to Genesys Cloud → Admin → Architect
-# 2. Open the "Dial Telekom" inbound call flow
-# 3. Click  ⋮  →  Export  →  download the .yaml file
-# 4. Replace the entire content of this file with the exported YAML
-# 5. Commit and push to main — GitHub Actions will deploy it automatically
-#
-# IMPORTANT: Do NOT commit credentials or sensitive data inside the YAML.
-# =============================================================================
-#
-# PLACEHOLDER — replace with the real exported YAML from Genesys Architect
-#
 inboundCall:
   name: Dial Telekom
-  # ... exported flow content goes here ...
+  description: "Dial Telekom inbound call flow"
+  division: Home
+  startUpRef: "/inboundCall/tasks/task[Default Task]"
+  defaultLanguage: en-us
+  supportedLanguages:
+    en-us:
+      defaultLanguageSkill:
+        lit:
+          name: English
+      textToSpeech:
+        Genesys Enhanced TTS:
+          voice: en-US-JennyNeural
+  initialGreeting:
+    tts: Thank you for calling Telekom. Please hold while we connect you.
+  settingsActionDefaults:
+    playAudioOnSilence:
+      allowedRepeatCount:
+        lit: 5
+      silenceDuration:
+        lit:
+          seconds: 1
+      timeout:
+        lit:
+          seconds: 40
+    detectSilence:
+      silenceDuration:
+        lit:
+          seconds: 1
+      timeout:
+        lit:
+          seconds: 40
+  tasks:
+    task:
+      name: Default Task
+      actions:
+        - disconnect:
+            name: Disconnect
