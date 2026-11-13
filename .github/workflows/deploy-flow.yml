@@ -1,0 +1,78 @@
+name: Deploy - Dial Telekom Inbound Call Flow
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:   # allows manual trigger from GitHub UI
+
+jobs:
+  deploy-flow:
+    name: Terraform Plan & Apply (Dial Telekom Flow)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .   # repository root
+
+    env:
+      # Populated from GitHub Secrets (Settings → Secrets and variables → Actions)
+      TF_VAR_genesyscloud_oauthclient_id:     ${{ secrets.GENESYSCLOUD_OAUTHCLIENT_ID }}
+      TF_VAR_genesyscloud_oauthclient_secret: ${{ secrets.GENESYSCLOUD_OAUTHCLIENT_SECRET }}
+
+    steps:
+      # ── 1. Checkout code ──────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Set up Terraform ───────────────────────────────────────────
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.9"
+
+      # ── 3. Init ───────────────────────────────────────────────────────
+      - name: Terraform Init
+        run: terraform init
+
+      # ── 4. Format check ───────────────────────────────────────────────
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+        continue-on-error: true
+
+      # ── 5. Validate ───────────────────────────────────────────────────
+      - name: Terraform Validate
+        run: terraform validate
+
+      # ── 6. Plan (runs on every push/PR) ───────────────────────────────
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan -input=false
+
+      # ── 6a. Upload plan as artifact ───────────────────────────────────
+      - name: Upload Terraform Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-dial-telekom
+          path: tfplan
+          retention-days: 7
+
+      # ── 7. Apply (only on push to main, not on pull requests) ─────────
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: terraform apply -auto-approve -input=false tfplan
+
+      # ── 8. Show outputs ───────────────────────────────────────────────
+      - name: Terraform Output
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: terraform output -json | tee terraform-outputs.json
+
+      # ── 9. Upload outputs as artifact ─────────────────────────────────
+      - name: Upload Terraform Outputs
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-outputs-dial-telekom
+          path: terraform-outputs.json
+          retention-days: 7
